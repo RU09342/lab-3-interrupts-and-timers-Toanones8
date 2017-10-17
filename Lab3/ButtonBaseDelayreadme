@@ -1,0 +1,78 @@
+#SampleCode
+TI from Resource Explorer was used to make help code this project.
+
+
+# ButtonBasedDelay
+This lab required to makea button based delay for the MSP430 boards. To do this multiple pieces of code where needed. Each board had LEDS and buttons connected to different pins. 
+The code for all 5 boards had the same header file. This file was the #include<msp430.h>. This contains all the built in functions for the msp430.
+Inside the void function the watchdog timer has to be stopped,this is done by
+the code WDTCTL=WDTPW +WDTHOLD. This code makes the processor is not stuck in an infinite
+loop. The next steop configures the GPIO pins.
+
+#SETTING GPIO
+This step is different for each board. The desription for each GPIO is shown below.
+BUTTONS:
+G2: P1.3
+5529:P2.1 P1.1
+FR2311: P1.1
+FR6989:P1.1 P1.2
+5994: P5.6 P5.5
+
+LEDS:
+G2: P1.0 P1.6
+5529:P1.0 P1.1
+FR2311: P1.0 P2.0
+FR6989:P1.0 P9.7
+5994: P1.0 P1.1
+ To set the LEDS as outputs, the G2 P1.0 will be used as an example. The code used
+ is P1DIR |= BIT0; This will set P1 to 1 and the rest of the pins to 0. Setting P1 to 1
+ allows it to be an output.
+ To set the button as an input, the same approach is taken but the pin will be an 
+ input. The code "P1DIR |= BIT0;" will set pin 1.3 to be an input for the button
+ on the G2.
+ The next part is to set the LED to off. This done by the code:
+ P1OUT &= ~BIT0;
+ 
+ The next part is to enable a button interrupt, clear the interrupt flag, and enable the pull up
+ resistor for the button. The code is shown below.
+ P1IE |= BIT3; // P1.3 interrupt enabled
+P1IFG &= ~BIT3; // Clear P1.3
+ P1REN |= BIT3;   // Enable Pull Up resistor  on PIN 1.3
+ 
+ The next part allows the interrupts to be enabled. The code is:
+ __bis_SR_register(GIE); // Enable all interrupts
+ 
+ #Interrupt
+ #pragma vector= TIMER0_A0_VECTOR // TimerA0 interrupt
+__interrupt void Timer_A0 (void)
+    {P1OUT ^= BIT0;  // toggle led 1.0
+    }
+
+
+#pragma vector=PORT1_VECTOR     // button interrupt
+
+    __interrupt void PORT_1(void)
+
+    {if (P1IES & BIT3) //if the button is pressed
+
+        {TA1CTL = TASSEL_1 + MC_2;   // timerA1 is set to ACLK, continuous mode
+            P1OUT ^= BIT6;              // toggle second LED
+            P1IES &= ~BIT3;             // set interrupt to rising edge
+            }
+            else                // if button is not pressed
+            {
+               TA0CCR0 = TA1R; // set CCR0 to the value counted in TA1R
+              P1OUT &= ~BIT6; // turn off the second LED
+             P1IES |= BIT3; // set interrupt to falling edge
+             TA1CTL = TACLR; 
+            }P1IFG &= ~BIT3; // clear interrupt flag
+            }
+
+This code allows the button to be delayed depending on the button press
+
+#DIFFERENCES IN BOARDS
+Besides the difference in LEDS and BUTTON pins, one piece of code is different for one
+of the boards. The code below is needed for the 5994.
+PM5CTL0 &= ~LOCKLPM5; 
+ 
+ 
